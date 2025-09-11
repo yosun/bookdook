@@ -54,14 +54,18 @@
       display: grid; grid-template-rows: auto 1fr; gap: 0; background: var(--bg);
       min-height: 420px;
     }
-    .reader .bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 2px solid var(--line); }
+  .reader .bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 2px solid var(--line); }
     .reader .controls { display: inline-grid; grid-auto-flow: column; gap: 8px; }
     .reader .controls .btn { min-height: 36px; }
     .reader .screen { display: grid; grid-template-rows: 1fr; }
     .reader #reader-content {
-      padding: 14px; line-height: 1.5; font-size: 18px; max-width: 48ch; margin: 0 auto; width: 100%;
+  padding: 14px; line-height: 1.6; font-size: 18px; max-width: 64ch; margin: 0 auto; width: 100%;
     }
     .reader #reader-content p { margin: 0 0 0.8em 0; }
+  .compose { display: grid; gap: 8px; margin-top: 12px; }
+  .compose textarea { width: 100%; min-height: 120px; padding: 10px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); font-family: var(--font-mono); }
+  .compose .row { display: grid; grid-auto-flow: column; gap: 8px; width: fit-content; }
+  .examples { display: grid; gap: 8px; margin-top: 16px; }
 
     /* Sections */
     section { padding: calc(var(--pad) * 2) 0; border-bottom: 2px solid var(--line); }
@@ -79,6 +83,27 @@
 
     /* Accessibility */
     :focus-visible { outline: 3px solid var(--line); outline-offset: 2px; }
+
+    /* Active button state */
+    .btn.active { background: var(--fg); color: var(--bg); }
+
+    /* Reader content typography and Markdown elements */
+    #reader-content h1, #reader-content h2, #reader-content h3,
+    #reader-content h4, #reader-content h5, #reader-content h6 {
+      margin: 1em 0 0.4em 0; line-height: 1.2;
+    }
+    #reader-content h1 { font-size: 1.8em; }
+    #reader-content h2 { font-size: 1.5em; }
+    #reader-content h3 { font-size: 1.25em; }
+    #reader-content ul, #reader-content ol { padding-left: 1.2em; margin: 0.6em 0; }
+    #reader-content li { margin: 0.25em 0; }
+    #reader-content blockquote { border-left: 3px solid var(--line); padding-left: 10px; color: var(--muted); margin: 0.8em 0; }
+    #reader-content code { font-family: var(--font-mono); font-size: 0.95em; background: transparent; border: 1px solid var(--line); padding: 0 3px; border-radius: 4px; }
+    #reader-content pre { border: 2px solid var(--line); padding: 10px; border-radius: 8px; overflow: auto; }
+    #reader-content pre code { border: 0; padding: 0; }
+    #reader-content table { width: 100%; border-collapse: collapse; border: 2px solid var(--line); margin: 0.8em 0; }
+    #reader-content th, #reader-content td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+    #reader-content thead th { background: var(--bg); }
   </style>
 </head>
 <body>
@@ -117,12 +142,33 @@
             <label class="btn" for="open-file" aria-label="Open local file">Open<input id="open-file" type="file" accept=".txt,.html,.xhtml,.md" style="display:none"></label>
             <button class="btn" id="smaller" aria-label="Decrease font size">A−</button>
             <button class="btn" id="larger" aria-label="Increase font size">A+</button>
+            <button class="btn active" id="toggle-md" aria-pressed="true" title="Toggle Markdown rendering">MD</button>
           </div>
         </div>
         <div class="screen">
           <article id="reader-content" aria-live="polite">
             <p class="tag">Load a local .txt/.html file or use the sample to preview reading. High‑contrast, animation‑free.</p>
           </article>
+        </div>
+        <div class="compose" aria-label="Compose">
+          <label for="prompt"><strong>Try a generation</strong></label>
+          <textarea id="prompt" placeholder="Ask for a summary, explanation, or a short lesson..." aria-label="Prompt"></textarea>
+          <div class="row">
+            <button class="btn" id="generate" aria-label="Generate with backend">Generate</button>
+            <span class="tag" id="backend-tag"></span>
+          </div>
+          <div id="gen-output" class="tag" aria-live="polite"></div>
+        </div>
+
+        <div class="examples" aria-label="Examples">
+          <div>
+            <button class="btn" id="run-letter">Explain sample Medi-Cal letter</button>
+            <div id="letter-out" class="tag"></div>
+          </div>
+          <div>
+            <button class="btn" id="run-textbook">Build sample textbook (G5, en, fractions)</button>
+            <div id="textbook-out" class="tag"></div>
+          </div>
         </div>
       </div>
 
@@ -215,10 +261,20 @@
     (function() {
       const themeBtn = document.getElementById('theme');
       const content = document.getElementById('reader-content');
+  const genBtn = document.getElementById('generate');
+  const promptEl = document.getElementById('prompt');
+  const genOut = document.getElementById('gen-output');
+  const beTag = document.getElementById('backend-tag');
+  const runLetter = document.getElementById('run-letter');
+  const letterOut = document.getElementById('letter-out');
+  const runTextbook = document.getElementById('run-textbook');
+  const textbookOut = document.getElementById('textbook-out');
       const smaller = document.getElementById('smaller');
       const larger = document.getElementById('larger');
       const loadSample = document.getElementById('load-sample');
       const openFile = document.getElementById('open-file');
+  const toggleMdBtn = document.getElementById('toggle-md');
+  let mdEnabled = true;
 
       // Theme toggle
       themeBtn && themeBtn.addEventListener('click', () => {
@@ -245,7 +301,7 @@
           // path relative to /layout/page.html -> /content/letters/sample_medi_cal.txt
           const res = await fetch('../content/letters/sample_medi_cal.txt');
           const txt = await res.text();
-          renderText(txt);
+          renderAuto(txt, 'txt');
         } catch (e) {
           content.textContent = 'Failed to load sample: ' + (e && e.message ? e.message : e);
         }
@@ -259,15 +315,139 @@
         reader.onload = () => {
           const text = reader.result || '';
           if (typeof text === 'string') {
-            if (f.name.endsWith('.html') || f.name.endsWith('.xhtml')) {
-              renderHTML(text);
-            } else {
-              renderText(text);
-            }
+            renderAuto(text, f.name.split('.').pop().toLowerCase());
           }
         };
         reader.readAsText(f);
       });
+
+      // Markdown toggle
+      toggleMdBtn && toggleMdBtn.addEventListener('click', () => {
+        mdEnabled = !mdEnabled;
+        toggleMdBtn.classList.toggle('active', mdEnabled);
+        toggleMdBtn.setAttribute('aria-pressed', String(mdEnabled));
+      });
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      }
+
+      function inlineMd(s) {
+        // Inline code first
+        s = s.replace(/`([^`]+)`/g, (_, a) => '<code>' + escapeHtml(a) + '</code>');
+        // Bold and italic (basic)
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Links [text](url)
+        s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, t, u) => '<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener">' + escapeHtml(t) + '</a>');
+        return s;
+      }
+
+      function mdToHtml(md) {
+        const lines = md.replace(/\r/g, '').split('\n');
+        let out = [];
+        let i = 0;
+        let inCode = false; let codeLang = '';
+        function flushPara(buf) {
+          const text = buf.join(' ').trim();
+          if (text) out.push('<p>' + inlineMd(escapeHtml(text)) + '</p>');
+          buf.length = 0;
+        }
+        while (i < lines.length) {
+          let line = lines[i];
+          // Code fence
+          const fence = line.match(/^```\s*(\w+)?\s*$/);
+          if (fence) {
+            if (!inCode) { inCode = true; codeLang = fence[1] || ''; out.push('<pre><code>'); }
+            else { inCode = false; out.push('</code></pre>'); }
+            i++; continue;
+          }
+          if (inCode) { out.push(escapeHtml(line) + '\n'); i++; continue; }
+
+          // Table detection: header | delimiter | rows
+          if (line.includes('|') && i + 1 < lines.length && /^\s*\|?\s*:?[-]{3,}/.test(lines[i+1])) {
+            // Parse header
+            const headerCells = line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+            const alignSpec = lines[i+1].trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+            const aligns = alignSpec.map(a => a.startsWith(':-') && a.endsWith('-:') ? 'center' : a.endsWith('-:') ? 'right' : 'left');
+            i += 2;
+            let rows = [];
+            while (i < lines.length && lines[i].includes('|')) {
+              const r = lines[i].trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+              rows.push(r); i++;
+            }
+            let t = '<table><thead><tr>' + headerCells.map((h, idx) => '<th style="text-align:' + (aligns[idx] || 'left') + '">' + inlineMd(escapeHtml(h)) + '</th>').join('') + '</tr></thead><tbody>';
+            t += rows.map(r => '<tr>' + r.map((c, idx) => '<td style="text-align:' + (aligns[idx] || 'left') + '">' + inlineMd(escapeHtml(c)) + '</td>').join('') + '</tr>').join('');
+            t += '</tbody></table>';
+            out.push(t);
+            continue;
+          }
+
+          // Headings
+          const h = line.match(/^(#{1,6})\s+(.+)$/);
+          if (h) { out.push('<h' + h[1].length + '>' + inlineMd(escapeHtml(h[2].trim())) + '</h' + h[1].length + '>'); i++; continue; }
+
+          // Blockquote
+          if (/^>\s?/.test(line)) {
+            let bq = [];
+            while (i < lines.length && /^>\s?/.test(lines[i])) { bq.push(lines[i].replace(/^>\s?/, '')); i++; }
+            out.push('<blockquote>' + mdToHtml(bq.join('\n')).replace(/^<p>|<\/p>$/g, '') + '</blockquote>');
+            continue;
+          }
+
+          // Lists (unordered)
+          if (/^\s*[-*+]\s+/.test(line)) {
+            let items = [];
+            while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+              items.push('<li>' + inlineMd(escapeHtml(lines[i].replace(/^\s*[-*+]\s+/, ''))) + '</li>');
+              i++;
+            }
+            out.push('<ul>' + items.join('') + '</ul>');
+            continue;
+          }
+
+          // Lists (ordered)
+          if (/^\s*\d+\.\s+/.test(line)) {
+            let items = [];
+            while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+              items.push('<li>' + inlineMd(escapeHtml(lines[i].replace(/^\s*\d+\.\s+/, ''))) + '</li>');
+              i++;
+            }
+            out.push('<ol>' + items.join('') + '</ol>');
+            continue;
+          }
+
+          // Blank line -> paragraph break
+          if (/^\s*$/.test(line)) { out.push('<p></p>'); i++; continue; }
+
+          // Paragraph line; collect contiguous non-blank lines
+          let para = [line];
+          i++;
+          while (i < lines.length && !/^\s*$/.test(lines[i]) &&
+                 !/^(#{1,6})\s+/.test(lines[i]) &&
+                 !/^\s*[-*+]\s+/.test(lines[i]) &&
+                 !/^\s*\d+\.\s+/.test(lines[i]) &&
+                 !/^>\s?/.test(lines[i]) &&
+                 !/^```/.test(lines[i])) {
+            para.push(lines[i]); i++;
+          }
+          flushPara(para);
+        }
+        // Clean up consecutive empty paragraphs
+        const html = out.join('\n').replace(/(<p><\/p>\n?){2,}/g, '<p></p>');
+        return html;
+      }
+
+      function renderAuto(txt, ext) {
+        const e = (ext || '').toLowerCase();
+        if (e === 'html' || e === 'xhtml') return renderHTML(txt);
+        if (mdEnabled || e === 'md' || /^\s*#\s+/.test(txt)) return renderMarkdown(txt);
+        return renderText(txt);
+      }
+
+      function renderMarkdown(md) {
+        content.innerHTML = mdToHtml(md);
+      }
 
       function renderText(txt) {
         const safe = txt
@@ -289,6 +469,139 @@
       // Footer year
       const yr = document.getElementById('yr');
       if (yr) yr.textContent = new Date().getFullYear();
+
+      // Generate via local API -> backend
+      let currentCtrl = null;
+      genBtn && genBtn.addEventListener('click', async () => {
+        const prompt = (promptEl && promptEl.value || '').trim();
+        if (!prompt) { genOut.textContent = 'Enter a prompt.'; return; }
+        genBtn.disabled = true; genOut.textContent = '';
+        // Reset the content for a fresh run
+        content.innerHTML = '';
+        beTag.textContent = '';
+        let fullText = '';
+        let scheduled = false;
+        const scheduleRender = () => {
+          if (scheduled) return; scheduled = true;
+          setTimeout(() => {
+            scheduled = false;
+            if (mdEnabled) content.innerHTML = mdToHtml(fullText);
+          }, 80);
+        };
+        try {
+          // Start SSE stream
+          if (currentCtrl) { try { currentCtrl.abort(); } catch (_) {} }
+          const ctrl = new AbortController(); currentCtrl = ctrl;
+          const res = await fetch('/api/generate_stream', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, max_tokens: 400 }), signal: ctrl.signal
+          });
+          if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+          const reader = res.body.getReader();
+          const dec = new TextDecoder();
+          let buf = '';
+          const append = (t) => {
+            // append plain text efficiently without re-render flicker
+            if (mdEnabled) {
+              fullText += t;
+              scheduleRender();
+            } else {
+              const p = document.createElement('p');
+              p.textContent = t;
+              content.appendChild(p);
+            }
+          };
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let idx;
+            while ((idx = buf.indexOf('\n\n')) !== -1) {
+              const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+              if (!raw.startsWith('event:')) continue;
+              const lines = raw.split('\n');
+              const ev = lines[0].slice(7).trim();
+              const dataLine = lines.find(l => l.startsWith('data:')) || 'data: {}';
+              const dataStr = dataLine.slice(5).trim();
+              try {
+                const data = JSON.parse(dataStr || '{}');
+                if (ev === 'meta') {
+                  beTag.textContent = `Backend: ${data.backend}${data.model ? ' — ' + data.model : ''}`;
+                } else if (ev === 'delta') {
+                  append(data.text || '');
+                } else if (ev === 'done') {
+                  genBtn.disabled = false;
+                  if (mdEnabled) content.innerHTML = mdToHtml(fullText);
+                }
+              } catch (_) {
+                // ignore parse errors
+              }
+            }
+          }
+        } catch (e) {
+          // Fallback to non-stream endpoint
+          try {
+            const res2 = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, max_tokens: 400 }) });
+            const data = await res2.json();
+            if (data && data.ok) {
+              beTag.textContent = `Backend: ${data.backend}${data.model ? ' — ' + data.model : ''}`;
+              if (mdEnabled) {
+                content.innerHTML = mdToHtml(data.output || '');
+              } else {
+                // Render as text blocks
+                (data.output || '').split(/\n\n+/).forEach(block => {
+                  const p = document.createElement('p'); p.textContent = block; content.appendChild(p);
+                });
+              }
+              genOut.textContent = '';
+            } else {
+              genOut.textContent = 'Error: ' + ((data && data.error) || (e && e.message) || 'unknown error');
+            }
+          } catch (e2) {
+            genOut.textContent = 'Request failed: ' + (e2 && e2.message ? e2.message : e2);
+          } finally {
+            genBtn.disabled = false;
+          }
+        }
+      });
+
+      // Example: explain letter
+      runLetter && runLetter.addEventListener('click', async () => {
+        runLetter.disabled = true; letterOut.textContent = 'Explaining letter…';
+        try {
+          const res = await fetch('/api/explain_letter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input_path: 'content/letters/sample_medi_cal.pdf' }) });
+          const data = await res.json();
+          if (data.ok) {
+            const combined = `${data.summary}\n\n${data.checklist}`;
+            if (mdEnabled) renderMarkdown(combined); else renderText(combined);
+            letterOut.textContent = '';
+          } else {
+            letterOut.textContent = 'Error: ' + (data.error || 'unknown error');
+          }
+        } catch (e) {
+          letterOut.textContent = 'Request failed: ' + (e && e.message ? e.message : e);
+        } finally {
+          runLetter.disabled = false;
+        }
+      });
+
+      // Example: build textbook
+      runTextbook && runTextbook.addEventListener('click', async () => {
+        runTextbook.disabled = true; textbookOut.textContent = 'Building EPUB…';
+        try {
+          const res = await fetch('/api/build_textbook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ grade: 5, lang: 'en', topic: 'fractions' }) });
+          const data = await res.json();
+          if (data.ok) {
+            textbookOut.innerHTML = `Done: <a href="${data.epub}">${data.epub}</a>`;
+          } else {
+            textbookOut.textContent = 'Error: ' + (data.error || 'unknown error');
+          }
+        } catch (e) {
+          textbookOut.textContent = 'Request failed: ' + (e && e.message ? e.message : e);
+        } finally {
+          runTextbook.disabled = false;
+        }
+      });
     })();
   </script>
 </body>

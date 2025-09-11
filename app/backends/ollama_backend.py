@@ -16,19 +16,23 @@ class OllamaBackend(LLMBackend):
         self._ollama = ollama
         host = os.getenv("OLLAMA_HOST", "127.0.0.1")
         port = int(os.getenv("OLLAMA_PORT", "11434"))
-        self.client = ollama.Client(host=f"http://{host}:{port}")
-        self.model = os.getenv("OLLAMA_MODEL", "llama3")
+        self.client = self._ollama.Client(host=f"http://{host}:{port}")
+        # Default to a widely available open model; can override via OLLAMA_MODEL
+        self.model = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
     def generate(self, prompt: str, max_tokens: int = 512) -> str:
         # Use the simple generate endpoint for deterministic, offline generation.
-        resp = self.client.generate(
-            model=self.model,
-            prompt=prompt,
-            options={
-                "num_predict": max_tokens,
-                "temperature": 0.2,
-                "top_p": 0.9,
-            },
-        )
-        return resp.get("response", "").strip()
+        try:
+            resp = self.client.generate(
+                model=self.model,
+                prompt=prompt,
+                options={
+                    "num_predict": max_tokens,
+                    "temperature": 0.2,
+                    "top_p": 0.9,
+                },
+            )
+            return resp.get("response", "").strip()
+        except Exception as e:  # pragma: no cover - runtime dependent
+            raise RuntimeError(f"Ollama generation failed for model '{self.model}': {e}")
 
