@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" class="eink">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PlainText.ink — Sovereign reading & writing</title>
+  <meta name="description" content="PlainText.ink is a calm, monochrome interface for sovereign reading and writing. Built e‑Ink‑first. Local‑first. Paperwork‑minimal." />
+  <meta name="color-scheme" content="light dark" />
+  <meta property="og:title" content="PlainText.ink" />
+  <meta property="og:description" content="Sovereign reading and writing — e‑Ink‑first, local‑first, paperwork‑minimal." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/og.png" />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    /* PlainText.ink — monochrome landing page */
+    :root {
+      --bg: #fff; --fg: #111; --line: #000; --muted: #666;
+      --pad: 16px; --radius: 14px; --max: 820px;
+      --font-ui: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .theme-dark { --bg: #111; --fg: #eee; --line: #eee; --muted: #aaa; }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: var(--font-ui);
+      -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility;
+    }
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+
+    .wrap { max-width: var(--max); margin: 0 auto; padding: calc(var(--pad) * 2) var(--pad); }
+
+    /* Header */
+    header {
+      border-bottom: 2px solid var(--line);
+    }
+    .topbar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+    .brand { font-weight: 800; letter-spacing: 0.02em; }
+    .nav { display: inline-grid; grid-auto-flow: column; gap: 10px; }
+    .nav a { text-decoration: none; color: inherit; border: 2px solid var(--line); padding: 8px 12px; border-radius: 9999px; }
+
+    /* Hero */
+    .hero { display: grid; gap: 18px; padding: calc(var(--pad) * 2) 0; }
+    .title { font-size: clamp(26px, 6vw, 44px); line-height: 1.1; font-weight: 900; }
+    .tag { font-family: var(--font-mono); color: var(--muted); font-size: 14px; }
+    .cta { display: grid; grid-auto-flow: column; gap: 10px; width: fit-content; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); text-decoration: none; }
+
+    /* Reader block */
+    .reader {
+      border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden;
+      display: grid; grid-template-rows: auto 1fr; gap: 0; background: var(--bg);
+      min-height: 420px;
+    }
+    .reader .bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 2px solid var(--line); }
+    .reader .controls { display: inline-grid; grid-auto-flow: column; gap: 8px; }
+    .reader .controls .btn { min-height: 36px; }
+    .reader .screen { display: grid; grid-template-rows: 1fr; }
+    .reader #reader-content {
+      padding: 14px; line-height: 1.5; font-size: 18px; max-width: 48ch; margin: 0 auto; width: 100%;
+    }
+    .reader #reader-content p { margin: 0 0 0.8em 0; }
+
+    /* Sections */
+    section { padding: calc(var(--pad) * 2) 0; border-bottom: 2px solid var(--line); }
+    h2 { margin: 0 0 10px 0; font-size: 20px; }
+    p { margin: 8px 0; }
+    ul { padding-left: 16px; }
+    code { font-family: var(--font-mono); font-size: 0.95em; }
+
+    .grid-2 { display: grid; gap: 16px; }
+    @media (min-width: 820px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+    /* Footer */
+    footer { padding: calc(var(--pad) * 2) 0; font-size: 13px; color: var(--muted); }
+    .footnav { display: grid; grid-auto-flow: column; gap: 12px; justify-content: start; }
+
+    /* Accessibility */
+    :focus-visible { outline: 3px solid var(--line); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap topbar">
+      <div class="brand">PlainText.ink</div>
+      <nav class="nav" aria-label="Primary">
+        <a href="#about">About</a>
+        <a href="#manifesto">Manifesto</a>
+        <a href="#download">Download</a>
+        <a href="#docs">Docs</a>
+        <a href="#source">Source</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <!-- HERO -->
+      <section class="hero" aria-label="Intro">
+        <h1 class="title">Sovereign reading & writing — e‑Ink‑first.</h1>
+        <p class="tag">Local‑first. Offline‑ready. Paperwork‑minimal. Built for 480×800 portrait and 800×480 landscape.</p>
+        <div class="cta">
+          <a class="btn" href="#download" aria-label="Go to downloads">Download</a>
+          <a class="btn" href="#demo" aria-label="Open live demo">Live Demo</a>
+          <a class="btn" id="theme" aria-label="Toggle theme">Theme</a>
+        </div>
+      </section>
+
+      <!-- READER -->
+      <div class="reader" id="demo" role="region" aria-label="Reader">
+        <div class="bar">
+          <strong>Reader</strong>
+          <div class="controls">
+            <button class="btn" id="load-sample" aria-label="Load sample text">Load sample</button>
+            <label class="btn" for="open-file" aria-label="Open local file">Open<input id="open-file" type="file" accept=".txt,.html,.xhtml,.md" style="display:none"></label>
+            <button class="btn" id="smaller" aria-label="Decrease font size">A−</button>
+            <button class="btn" id="larger" aria-label="Increase font size">A+</button>
+          </div>
+        </div>
+        <div class="screen">
+          <article id="reader-content" aria-live="polite">
+            <p class="tag">Load a local .txt/.html file or use the sample to preview reading. High‑contrast, animation‑free.</p>
+          </article>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <section id="about" class="grid-2">
+        <div>
+          <h2>Why PlainText</h2>
+          <p>We build calm software for places where bandwidth, power, and time are scarce. PlainText is a simple, durable interface for reading and writing on e‑Ink devices — but it runs anywhere.</p>
+          <ul>
+            <li>High‑contrast, animation‑free UI</li>
+            <li>Large touch targets & keyboard support</li>
+            <li>Local‑first with optional sync</li>
+            <li>Privacy by default; telemetry‑free</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Design principles</h2>
+          <ul>
+            <li><strong>Monochrome</strong> — no reliance on color to convey meaning.</li>
+            <li><strong>Predictable</strong> — low refresh churn for e‑Ink panels.</li>
+            <li><strong>Legible</strong> — adjustable font, spacing, and contrast.</li>
+            <li><strong>Portable</strong> — single‑file HTML/CSS/JS builds.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- MANIFESTO -->
+      <section id="manifesto">
+        <h2>Manifesto</h2>
+        <p><em>We witnessed human potential shuttered by bureaucracy and isolation.</em> PlainText aims for sovereign tools: local‑first, offline‑first, paperwork‑minimal. Nothing flashy. Just clarity.</p>
+        <p>We choose formats that last. We value devices that sip power. We design for the rural and the urban billions at once.</p>
+      </section>
+
+      <!-- DOWNLOADS / LINKS -->
+      <section id="download" class="grid-2">
+        <div>
+          <h2>Download</h2>
+          <ul>
+            <li><a class="btn" href="/builds/plaintext-web.zip">Web build (.zip)</a></li>
+            <li><a class="btn" href="/builds/plaintext-android.apk">Android (.apk)</a></li>
+            <li><a class="btn" href="/builds/plaintext-linux.AppImage">Linux (AppImage)</a></li>
+          </ul>
+          <p class="tag">Checksums and signatures provided in <code>/builds/sha256sum.txt</code>.</p>
+        </div>
+        <div id="docs">
+          <h2>Docs</h2>
+          <ul>
+            <li><a class="btn" href="/docs/getting-started.html">Getting Started</a></li>
+            <li><a class="btn" href="/docs/customize.html">Customize UI</a></li>
+            <li><a class="btn" href="/docs/sync.html">Optional Sync</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- SOURCE / LICENSE -->
+      <section id="source" class="grid-2">
+        <div>
+          <h2>Source</h2>
+          <p>PlainText is open source (permissive). Clone, fork, remix.</p>
+          <p><code>git clone https://example.com/plaintext.git</code></p>
+        </div>
+        <div>
+          <h2>License</h2>
+          <p>MIT or MPL‑2.0 — choose the one that best fits distribution partners. Dual‑license available for OEMs.</p>
+        </div>
+      </section>
+
+      <!-- CONTACT -->
+      <section id="contact">
+        <h2>Contact</h2>
+        <p>Email: <a href="mailto:hello@plaintext.ink">hello@plaintext.ink</a></p>
+        <p class="tag">We operate with minimal inbox refresh — expect batch replies.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footnav" aria-label="Footer">
+        <a href="#privacy">Privacy</a>
+        <a href="#terms">Terms</a>
+        <a href="#accessibility">Accessibility</a>
+      </div>
+      <p>© <span id="yr">2025</span> PlainText.ink. No tracking, no cookies beyond essentials.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Basic, e‑Ink‑friendly interactions (no animations)
+    (function() {
+      const themeBtn = document.getElementById('theme');
+      const content = document.getElementById('reader-content');
+      const smaller = document.getElementById('smaller');
+      const larger = document.getElementById('larger');
+      const loadSample = document.getElementById('load-sample');
+      const openFile = document.getElementById('open-file');
+
+      // Theme toggle
+      themeBtn && themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('theme-dark');
+      });
+
+      // Font size controls
+      function getPx() {
+        const s = window.getComputedStyle(content).fontSize;
+        return parseInt(s, 10) || 18;
+      }
+      smaller && smaller.addEventListener('click', () => {
+        const px = Math.max(14, getPx() - 2);
+        content.style.fontSize = px + 'px';
+      });
+      larger && larger.addEventListener('click', () => {
+        const px = Math.min(28, getPx() + 2);
+        content.style.fontSize = px + 'px';
+      });
+
+      // Load sample from repo content
+      loadSample && loadSample.addEventListener('click', async () => {
+        try {
+          // path relative to /layout/page.html -> /content/letters/sample_medi_cal.txt
+          const res = await fetch('../content/letters/sample_medi_cal.txt');
+          const txt = await res.text();
+          renderText(txt);
+        } catch (e) {
+          content.textContent = 'Failed to load sample: ' + (e && e.message ? e.message : e);
+        }
+      });
+
+      // Open local file
+      openFile && openFile.addEventListener('change', (ev) => {
+        const f = ev.target.files && ev.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = reader.result || '';
+          if (typeof text === 'string') {
+            if (f.name.endsWith('.html') || f.name.endsWith('.xhtml')) {
+              renderHTML(text);
+            } else {
+              renderText(text);
+            }
+          }
+        };
+        reader.readAsText(f);
+      });
+
+      function renderText(txt) {
+        const safe = txt
+          .replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
+          .split(/\n\n+/)
+          .map(p => `<p>${p.replace(/\n/g,'<br>')}</p>`) 
+          .join('');
+        content.innerHTML = safe || '<p class="tag">(empty)</p>';
+      }
+
+      function renderHTML(html) {
+        // Basic sanitize: strip scripts/styles; allow simple markup
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        tmp.querySelectorAll('script,style').forEach(n => n.remove());
+        content.innerHTML = tmp.innerHTML;
+      }
+
+      // Footer year
+      const yr = document.getElementById('yr');
+      if (yr) yr.textContent = new Date().getFullYear();
+    })();
+  </script>
+</body>
+</html>
