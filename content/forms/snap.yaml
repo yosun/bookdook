@@ -1,0 +1,19 @@
+name: SNAP Application
+fields:
+  - name: applicant_name
+    label: Applicant Name
+    type: string
+    required: true
+  - name: household_size
+    label: Household Size
+    type: integer
+    required: true
+  - name: monthly_income
+    label: Monthly Income (USD)
+    type: number
+  - name: address
+    label: Address
+    type: string
+  - name: phone
+    label: Phone Number
+    type: string

@@ -1,0 +1,9 @@
+python-dotenv>=1.0.1
+PyQt6>=6.6.1
+pypdf>=4.3.1
+reportlab>=4.2.2
+PyYAML>=6.0.2
+# Default demo backend talks to local Ollama daemon
+ollama>=0.3.1
+# Optional: install manually for llama.cpp backend
+# llama-cpp-python
