@@ -29,7 +29,7 @@ Switch via `PLAIN_BACKEND` env var. If a backend is unavailable, it falls back t
 ```bash
 # Install Ollama (default demo backend)
 brew install ollama   # or see https://ollama.com/download
-ollama pull llama3    # small local GPT-OSS model
+ollama pull gpt-oss:20b    # small local GPT-OSS model
 
 # Python env
 python -m venv .venv && source .venv/bin/activate
@@ -47,7 +47,10 @@ python cli/explain_letter.py --in content/letters/sample_medi_cal.pdf
 python cli/form_wizard.py --schema content/forms/snap.yaml --out out/filled.pdf
 
 # Textbook Builder
-python cli/build_textbook.py --grade 5 --lang es --topic "fractions"
+# sample mode (fast, minimal tokens)
+python cli/build_textbook.py --grade 5 --lang es --topic "fractions" --mode sample
+# full mode (longer, more content)
+# python cli/build_textbook.py --grade 5 --lang es --topic "fractions" --mode full
 ```
 
 Notes:

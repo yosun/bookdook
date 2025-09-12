@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from app.backends.factory import get_backend
 from app.features.letter_explainer import explain_letter
+from app.features.form_helper import fill_form_to_pdf
 from app.features.textbook_builder import TextbookSpec, build_textbook
 
 
@@ -145,12 +146,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 grade = int(payload.get("grade", 5))
                 lang = str(payload.get("lang", "en"))
                 topic = str(payload.get("topic", "fractions"))
+                mode = str(payload.get("mode", "sample"))
                 out = payload.get("out") or os.path.join("out", f"textbook_g{grade}_{lang}_{topic.replace(' ', '_')}.epub")
                 os.makedirs(os.path.dirname(out), exist_ok=True)
                 spec = TextbookSpec(grade=grade, language=lang, topic=topic)
-                path = build_textbook(spec, out)
+                path = build_textbook(spec, out, mode=mode)
                 rel = "/" + os.path.relpath(path, start=os.getcwd())
-                self._send_json({"ok": True, "epub": rel})
+                self._send_json({"ok": True, "epub": rel, "mode": mode})
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, status=500)
+            return
+        elif self.path == "/api/form_fill":
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                data = self.rfile.read(length) if length > 0 else b"{}"
+                payload = json.loads(data.decode("utf-8")) if data else {}
+                schema = str(payload.get("schema") or "content/forms/snap.yaml")
+                out = str(payload.get("out") or "out/filled.pdf")
+                interactive = bool(payload.get("interactive", False))
+                if interactive:
+                    # Interactive mode cannot be supported via HTTP
+                    self._send_json({"ok": False, "error": "interactive mode not supported via HTTP"}, status=400)
+                    return
+                os.makedirs(os.path.dirname(out), exist_ok=True)
+                out_pdf, answers = fill_form_to_pdf(schema, out, interactive=False)
+                rel = "/" + os.path.relpath(out_pdf, start=os.getcwd())
+                self._send_json({"ok": True, "pdf": rel, "answers": answers})
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)}, status=500)
             return

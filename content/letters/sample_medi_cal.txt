@@ -1,6 +1,21 @@
-This is a sample benefits notice used for demos.
-It explains eligibility and steps to confirm information.
-Please review and respond by the listed date.
+State of California – Department of Health Care Services
+P.O. Box XXXXX
+Sacramento, CA XXXXX
 
-Sincerely,
-Agency
+Date: [MM/DD/YYYY]
+
+Re: Your Medi-Cal Case No: 123-AB-4567
+
+Dear Beneficiary:
+
+This Notice is to inform you that, pursuant to California Welfare & Institutions Code § 14005.1 and the regulations promulgated under Title 22, Division 506 of the California Code of Regulations, your eligibility under MAGI Medi-Cal has been re-evaluated using both federal MAGI and non-MAGI criteria.  
+
+Based upon the revised income, asset & tax household information that you provided, we have determined that you no longer meet the pertinent thresholds for MAGI Medi-Cal; however, you may still qualify for non-MAGI Medi-Cal or another program such as “Medically Needy”, “Medically Indigent”, or “Programs for Persons with Disabilities.”  
+
+Because of this, your application for continued coverage under MAGI will be terminated effective [Date], and your BIC(s) (Benefits Identification Card(s)) must be signed and returned to us. Note: this termination under MAGI does not equate to immediate loss of all benefits.  
+
+If you disagree with this decision, you may request a hearing or file an appeal by contacting the county eligibility office within 90 calendar days of the date on this notice. Be aware that any gaps in coverage may result from processing delays.  
+
+Sincerely,  
+Eligibility Supervisor  
+Department of Health Care Services

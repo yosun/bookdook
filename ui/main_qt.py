@@ -94,6 +94,9 @@ class TextbookTab(QtWidgets.QWidget):
         self.lang = QtWidgets.QLineEdit("es")
         self.topic = QtWidgets.QLineEdit("fractions")
         self.out = QtWidgets.QLineEdit("out/textbook_g5_es_fractions.epub")
+    self.mode = QtWidgets.QComboBox()
+    self.mode.addItems(["sample", "full"])
+    self.mode.setCurrentText("sample")
         self.run_btn = QtWidgets.QPushButton("Build Textbook")
         self.status = QtWidgets.QLabel()
 
@@ -101,6 +104,7 @@ class TextbookTab(QtWidgets.QWidget):
         form.addRow("Grade", self.grade)
         form.addRow("Language", self.lang)
         form.addRow("Topic", self.topic)
+    form.addRow("Mode", self.mode)
         form.addRow("Output", self.out)
         layout.addLayout(form)
         layout.addWidget(self.run_btn)
@@ -112,7 +116,7 @@ class TextbookTab(QtWidgets.QWidget):
         spec = TextbookSpec(grade=self.grade.value(), language=self.lang.text().strip(), topic=self.topic.text().strip())
         dest = self.out.text().strip()
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        path = build_textbook(spec, dest)
+    path = build_textbook(spec, dest, mode=self.mode.currentText())
         self.status.setText(f"Wrote {path}")
 
 
