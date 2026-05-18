@@ -17,8 +17,8 @@ class OllamaBackend(LLMBackend):
         host = os.getenv("OLLAMA_HOST", "127.0.0.1")
         port = int(os.getenv("OLLAMA_PORT", "11434"))
         self.client = self._ollama.Client(host=f"http://{host}:{port}")
-        # Default to a widely available open model; can override via OLLAMA_MODEL
-        self.model = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
+        # Default to a local Gemma4 model; can override via OLLAMA_MODEL
+        self.model = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
 
     def generate(self, prompt: str, max_tokens: int = 512) -> str:
         # Use the simple generate endpoint for deterministic, offline generation.

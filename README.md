@@ -1,6 +1,6 @@
 # PlainText.ink MVP
 
-“a $15 offline e-ink omnibook tablet powered by GPT-OSS, built for the 4B people current tech can’t reach.”
+“a $15 offline e-ink omnibook tablet powered by Gemma4, built for the 4B people current tech can’t reach.”
 
 This repository provides a runnable MVP with three features and two local LLM backends.
 
@@ -29,7 +29,7 @@ Switch via `PLAIN_BACKEND` env var. If a backend is unavailable, it falls back t
 ```bash
 # Install Ollama (default demo backend)
 brew install ollama   # or see https://ollama.com/download
-ollama pull gpt-oss:20b    # small local GPT-OSS model
+ollama pull gemma4:e2b    # local Gemma4 model
 
 # Python env
 python -m venv .venv && source .venv/bin/activate
