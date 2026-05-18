@@ -72,11 +72,36 @@
       <section class="hero" aria-label="Intro">
         <h1 class="title">Sovereign reading & writing — e‑Ink‑first.</h1>
         <p class="tag">Local‑first. Offline‑ready. Paperwork‑minimal. Works great on 480×800 portrait and 800×480 landscape.</p>
+        <p class="tag">Mission: Empower everyday readers and writers with an offline, local-first e-Ink toolkit that keeps control, privacy, and simplicity first.</p>
         <div class="cta">
           <a class="btn" href="http://127.0.0.1:8000/layout/page.html">Open local app</a>
           <a class="btn" href="#install">Install & run</a>
         </div>
         <p class="tag">Sample mode finishes with minimal tokens and still produces a valid EPUB.</p>
+      </section>
+
+      <section id="inspiration">
+        <h2>Inspiration</h2>
+        <p>Billions remain unseen by today’s tech — 2.6 billion fully offline as of 2024, with many more urban poor who possess devices but cannot use them for education or civic services. In cities, paperwork stalls access; in rural regions, textbooks are few or nonexistent. PlainText.ink was conceived to bridge both divides — restoring clarity, connection, and learning to the 4 billion people left behind.</p>
+        <p class="tag">(ITU Facts & Figures 2024)</p>
+      </section>
+
+      <section id="what">
+        <h2>What it does</h2>
+        <p>PlainText.ink is a $10 offline e-ink omnibook tablet powered by open Gemma4 models. It works entirely offline and offers:</p>
+        <ul>
+          <li><strong>Letter Explainer</strong>: Converts official letters into a concise TL;DR plus “next steps” checklist.</li>
+          <li><strong>Form Helper</strong>: Guided Q&A flow that auto-fills PDFs and produces review notes.</li>
+          <li><strong>Textbook Builder</strong>: Overnight generation of custom textbooks by grade, topic, and language.</li>
+          <li><strong>Multilingual support</strong>: Gemma4 is trained on multilingual data; it supports multiple languages out of the box and can be adapted to local ones.</li>
+        </ul>
+        <p>Alignment with UN Sustainable Development Goals (SDGs):</p>
+        <ul>
+          <li><strong>SDG 4 — Quality Education</strong>: Delivers offline, multilingual educational content to underserved populations.</li>
+          <li><strong>SDG 1 — No Poverty</strong>: Empowers users with literacy, form assistance, and access to vital services.</li>
+          <li><strong>SDG 10 — Reduced Inequalities</strong>: Affordable and accessible design directly combats educational and digital inequality.</li>
+          <li><strong>SDG 17 — Partnerships for the Goals</strong>: Scaling will involve partnerships with NGOs, governments, and local organizations.</li>
+        </ul>
       </section>
 
       <section id="features">
@@ -107,7 +132,7 @@
         <p class="tag">Ollama example — replace model as desired.</p>
         <pre>brew install ollama
 ollama serve
-ollama run gpt-oss:20b</pre>
+ollama run gemma4:e2b</pre>
         <p class="tag">Clone & run BookDook (this repo):</p>
         <pre>git clone https://github.com/yosun/bookdook.git
 cd bookdook/BookDook
