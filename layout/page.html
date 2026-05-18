@@ -477,13 +477,18 @@
       if (yr) yr.textContent = new Date().getFullYear();
 
       // Generate via local API -> backend
+      const apiBase = location.protocol === 'file:' ? 'http://127.0.0.1:8000' : '';
+      if (location.protocol === 'file:' && genOut) {
+        genOut.textContent = 'Warning: This page is loaded from file://. Use the local server at http://127.0.0.1:8000 for generation to work.';
+      }
       let currentCtrl = null;
       genBtn && genBtn.addEventListener('click', async () => {
         const prompt = (promptEl && promptEl.value || '').trim();
         if (!prompt) { genOut.textContent = 'Enter a prompt.'; return; }
-        genBtn.disabled = true; genOut.textContent = '';
+        genBtn.disabled = true;
+        genOut.textContent = 'Generating…';
         // Reset the content for a fresh run
-        content.innerHTML = '';
+        content.innerHTML = '<p class="tag">Generating…</p>';
         beTag.textContent = '';
         let fullText = '';
         let scheduled = false;
@@ -498,7 +503,7 @@
           // Start SSE stream
           if (currentCtrl) { try { currentCtrl.abort(); } catch (_) {} }
           const ctrl = new AbortController(); currentCtrl = ctrl;
-          const res = await fetch('/api/generate_stream', {
+          const res = await fetch(`${apiBase}/api/generate_stream`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, max_tokens: 400 }), signal: ctrl.signal
           });
@@ -507,7 +512,7 @@
           const dec = new TextDecoder();
           let buf = '';
           const append = (t) => {
-            // append plain text efficiently without re-render flicker
+            if (!t) return;
             if (mdEnabled) {
               fullText += t;
               scheduleRender();
@@ -517,6 +522,7 @@
               content.appendChild(p);
             }
           };
+          let doneReceived = false;
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
@@ -535,26 +541,45 @@
                   beTag.textContent = `Backend: ${data.backend}${data.model ? ' — ' + data.model : ''}`;
                 } else if (ev === 'delta') {
                   append(data.text || '');
+                } else if (ev === 'info') {
+                  genOut.textContent = data.note || '';
                 } else if (ev === 'done') {
-                  genBtn.disabled = false;
+                  doneReceived = true;
+                  if (data.ok === false) {
+                    genOut.textContent = 'Error: ' + (data.error || 'Empty response');
+                  } else {
+                    genOut.textContent = '';
+                  }
                   if (mdEnabled) content.innerHTML = mdToHtml(fullText);
+                  genBtn.disabled = false;
                 }
               } catch (_) {
                 // ignore parse errors
               }
             }
+            if (doneReceived) {
+              // Stop reading immediately so the UI doesn't appear to hang
+              // when the server keeps the HTTP socket open after 'done'.
+              try { await reader.cancel(); } catch (_) {}
+              break;
+            }
+          }
+          if (!doneReceived) {
+            // If the stream ended without a done event, ensure UI resets
+            genBtn.disabled = false;
+            genOut.textContent = '';
+            if (mdEnabled) content.innerHTML = mdToHtml(fullText);
           }
         } catch (e) {
           // Fallback to non-stream endpoint
           try {
-            const res2 = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, max_tokens: 400 }) });
+            const res2 = await fetch(`${apiBase}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, max_tokens: 400 }) });
             const data = await res2.json();
             if (data && data.ok) {
               beTag.textContent = `Backend: ${data.backend}${data.model ? ' — ' + data.model : ''}`;
               if (mdEnabled) {
                 content.innerHTML = mdToHtml(data.output || '');
               } else {
-                // Render as text blocks
                 (data.output || '').split(/\n\n+/).forEach(block => {
                   const p = document.createElement('p'); p.textContent = block; content.appendChild(p);
                 });
@@ -575,7 +600,7 @@
       runLetter && runLetter.addEventListener('click', async () => {
         runLetter.disabled = true; letterOut.textContent = 'Explaining letter…';
         try {
-          const res = await fetch('/api/explain_letter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input_path: 'content/letters/sample_medi_cal.pdf' }) });
+          const res = await fetch(`${apiBase}/api/explain_letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input_path: 'content/letters/sample_medi_cal.pdf' }) });
           const data = await res.json();
           if (data.ok) {
             const combined = `${data.summary}\n\n${data.checklist}`;
@@ -595,7 +620,7 @@
       runTextbook && runTextbook.addEventListener('click', async () => {
         runTextbook.disabled = true; textbookOut.textContent = 'Building EPUB…';
         try {
-          const res = await fetch('/api/build_textbook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ grade: 5, lang: 'en', topic: 'fractions', mode: 'sample' }) });
+          const res = await fetch(`${apiBase}/api/build_textbook`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ grade: 5, lang: 'en', topic: 'fractions', mode: 'sample' }) });
           const data = await res.json();
           if (data.ok) {
             textbookOut.innerHTML = `Done: <a href="${data.epub}">${data.epub}</a>`;
@@ -613,7 +638,7 @@
       runForm && runForm.addEventListener('click', async () => {
         runForm.disabled = true; formOut.textContent = 'Filling PDF…';
         try {
-          const res = await fetch('/api/form_fill', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schema: 'content/forms/snap.yaml', out: 'out/filled.pdf' }) });
+          const res = await fetch(`${apiBase}/api/form_fill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schema: 'content/forms/snap.yaml', out: 'out/filled.pdf' }) });
           const data = await res.json();
           if (data.ok) {
             formOut.innerHTML = `Done: <a href="${data.pdf}">${data.pdf}</a>`;

@@ -95,17 +95,30 @@ class OllamaBackend(LLMBackend):
 
     def generate(self, prompt: str, max_tokens: int = 512) -> str:
         # Use the simple generate endpoint for deterministic, offline generation.
+        gen_kwargs = dict(
+            model=self.model,
+            prompt=prompt,
+            options={
+                "num_predict": max_tokens,
+                "temperature": 0.2,
+                "top_p": 0.9,
+            },
+        )
         try:
-            resp = self.client.generate(
-                model=self.model,
-                prompt=prompt,
-                options={
-                    "num_predict": max_tokens,
-                    "temperature": 0.2,
-                    "top_p": 0.9,
-                },
-            )
-            return resp.get("response", "").strip()
+            try:
+                # think=False disables reasoning-token consumption on models
+                # like Gemma4 that would otherwise burn the entire token
+                # budget on hidden chain-of-thought and return an empty
+                # response. Older ollama clients reject the kwarg, so retry
+                # without it.
+                resp = self.client.generate(**gen_kwargs, think=False)
+            except TypeError:
+                resp = self.client.generate(**gen_kwargs)
+            if isinstance(resp, dict):
+                text = resp.get("response", "")
+            else:
+                text = getattr(resp, "response", "") or ""
+            return (text or "").strip()
         except Exception as e:  # pragma: no cover - runtime dependent
             raise RuntimeError(f"Ollama generation failed for model '{self.model}': {e}")
 

@@ -59,12 +59,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self._send_json({"ok": False, "error": "Missing 'prompt'"}, status=400)
                     return
                 be = get_backend()
-                # Prepare SSE headers
+                # Prepare SSE headers. Use Connection: close so the browser
+                # fetch reader actually receives a stream end after the final
+                # 'done' event; otherwise HTTP/1.1 keep-alive holds the socket
+                # open and the client appears to "hang" forever.
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Cache-Control", "no-cache")
-                self.send_header("Connection", "keep-alive")
+                self.send_header("X-Accel-Buffering", "no")
+                self.send_header("Connection", "close")
                 self.end_headers()
+                # Tell the BaseHTTPRequestHandler not to keep this connection alive.
+                self.close_connection = True
 
                 def sse(ev: str, obj: dict | str):
                     if isinstance(obj, dict):
@@ -87,9 +93,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                 # Try streaming with Ollama client if present
                 client = getattr(be, "client", None)
+                streamed_any = False
+                last_done_reason = None
                 try:
                     if client is not None:
-                        stream = client.generate(
+                        # think=False disables reasoning-token output for
+                        # Gemma4 / other reasoning-capable models so the
+                        # full token budget goes to visible response text.
+                        # Older ollama clients do not accept this kwarg, so
+                        # fall back gracefully.
+                        gen_kwargs = dict(
                             model=getattr(be, "model", None) or "",
                             prompt=prompt,
                             options={
@@ -99,23 +112,66 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             },
                             stream=True,
                         )
+                        try:
+                            stream = client.generate(**gen_kwargs, think=False)
+                        except TypeError:
+                            stream = client.generate(**gen_kwargs)
                         for chunk in stream:
-                            piece = chunk.get("response", "")
+                            # The ollama python client may yield dicts or
+                            # GenerateResponse Pydantic objects depending on
+                            # version. Normalize both.
+                            if isinstance(chunk, dict):
+                                piece = chunk.get("response", "") or ""
+                                done_flag = chunk.get("done", False)
+                                done_reason = chunk.get("done_reason")
+                            else:
+                                piece = getattr(chunk, "response", "") or ""
+                                done_flag = getattr(chunk, "done", False)
+                                done_reason = getattr(chunk, "done_reason", None)
                             if piece:
+                                streamed_any = True
                                 sse("delta", {"text": piece})
-                        sse("done", {"ok": True})
-                        return
+                            if done_flag and done_reason:
+                                last_done_reason = done_reason
+                        if not streamed_any:
+                            # Fall through to non-streaming fallback below so
+                            # the user sees actual content (or a clear error)
+                            # instead of a silent empty stream.
+                            sse("info", {
+                                "note": (
+                                    f"Empty stream (done_reason={last_done_reason}); "
+                                    "trying non-streaming fallback…"
+                                )
+                            })
+                        else:
+                            sse("done", {"ok": True})
+                            try:
+                                self.wfile.flush()
+                            except Exception:
+                                pass
+                            return
                 except Exception as e:
                     # Fall back below
                     sse("info", {"note": f"stream fallback: {e}"})
 
                 # Fallback: non-streaming
-                out = be.generate(prompt, max_tokens=max_tokens)
-                if not out.strip():
-                    sse("done", {"ok": False, "error": "Empty response"})
+                try:
+                    out = be.generate(prompt, max_tokens=max_tokens)
+                except Exception as e:
+                    sse("done", {"ok": False, "error": str(e)})
+                    return
+                if not (isinstance(out, str) and out.strip()):
+                    err = "Empty response from model"
+                    if last_done_reason:
+                        err += f" (done_reason={last_done_reason})"
+                    sse("done", {"ok": False, "error": err})
                 else:
                     sse("delta", {"text": out})
                     sse("done", {"ok": True})
+                try:
+                    self.wfile.flush()
+                except Exception:
+                    pass
             except Exception as e:
                 # In SSE mode, we can only write plain data lines
                 try:
@@ -190,7 +246,12 @@ def main(port: int = 8000):
     # Serve from project root so relative paths like ../content/... work from layout/page.html
     root = ROOT
     os.chdir(root)
-    with socketserver.ThreadingTCPServer(("127.0.0.1", port), Handler) as httpd:
+
+    class ReusableServer(socketserver.ThreadingTCPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
+    with ReusableServer(("127.0.0.1", port), Handler) as httpd:
         print(f"Serving BookDook at http://127.0.0.1:{port}/layout/page.html")
         try:
             httpd.serve_forever()
